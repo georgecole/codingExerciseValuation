@@ -44,19 +44,37 @@ The task highlighted that the start and end rows could be seperated, even allowi
 
 There seems to be 3 obvious options for when to write an event to the database, presuming you loop the data in the log file one row at a time (let's not worry about the multithreading requirement just yet (if at all, at this point it feels like overkill / stretching to include extra stuff in the task)
 1. At the end - This is an easy option, everything has two entries so at the end we'll have everything coupled up, we then add it to the database
-2. Once a pair is found - We incremently add the event to the database once we have a start and and end time
+2. Once a pair is found - We incrementely add the event to the database once we have a start and and end time
 3. Immediately - We add or update the values into the database utilising the Alert ID as a primary key, Database syntax to do this is going to be platform specific, ON DUPLIATE KEY UPDATE in Mysql vs writing something more trivial in MSSQL checking if the key exists, assessing the row count of the update or catching a failed insert due to primary key existing.
 
 There's pros and cons to each of these, and the task itself doesn't explicitly specify where attention should be focussed, key considerations include:
 * Matching events within Java is likely to utilise memory to hold the hashmap / data, this will grow exponentially with the size of the file / number of log entries. In the real world this could exceed available memory or result in un-neccessary costs (where memory on a cloud environmennt was just increased and increased to cater for it). It also stresses the importance of resilience
 * The longer we leave it until we write to the database, the more dependance we place on our code working and application not falling over inside a later loop iteration, the same considerations apply for how we're writing to the database (a bulk commit could fail due to a single row, preventing other good rows being written)
-* Excessive database I/O operations - Commiting more frequently will place move overhead on the database, excessive table writes here might cause contention with other processes which want to consume it, or indeed this process itself if we go down the multi-threading route. As with all solutions the non-technical requirements should be explored to ensure we're not over-engineering.
+* Excessive database I/O operations - Committing more frequently will place move overhead on the database, excessive table writes here might cause contention with other processes which want to consume it, or indeed this process itself if we go down the multi-threading route. As with all solutions the non-technical requirements should be explored to ensure we're not over-engineering.
 * Data integrity - This scenario is based on accepting a file and loading that data into a file based database - it's unclear what the expectation would be around data retention. If you were to assume that the same solution and database were to be used daily, to incrementally load new logs - Then the application would need to consider how it would roll-back a data load which failed half way through processing, to allow the re-load of that file without duplication. This would be easier to manage with option 1, though could be achieved in option 2 and 3 through either the use of transcations or tagging each row with an upload ID for manual deletion in a cache block.
 
-Most of these coniderations are around understanding which parts of the processing would be more effectively performed by the Application vs the Database. The utilisation of HSQLDB on the same machine running the code would likely yield different results to using dedicated database / application deployments.
+Most of these considerations are around understanding which parts of the processing would be more effectively performed by the Application vs the Database. The utilisation of HSQLDB on the same machine running the code would likely yield different results to using dedicated database / application deployments.
 For the purpose of similicity, I would assume that even an implementation of HSQLDB would allow for the more effective processing of large amounts of data using option 2/3, given that it can utilise file based disc storage as well as memory, This would allow the file to be 'streamed' into the database rather than operated on entirely in memory, which is what would often cause an out of memory exception when processing large volumes of data.
 
 At this point I've spent half the 2 hour recommended time limit thinking through a solution, I wouldn't expect most software development candidates to do that. 
 That said if I were hiring for a more senior position such as an Engineering Team Lead, I would care more around their assessment of problems than how they name their variables.
 
 That said, I've just installed IntelliJ on my Macbook, let's see how it fares...
+
+# Overview of submitted solution
+
+## Executing / How to run 
+The task required this app to be run from the command line taking a file path as an input param
+
+If you want to run it in an IDE such as intelliJ, execute main within file Main.java
+To allow for this we could add an argument in the configuration, alternatively the solution will prompt for one
+
+
+## Log4J Vulnerabilities
+logback-classic 1.1.7 is advised within the task 
+It uses the SLF4J API and was released 29 March 2016
+I'm taking a decision to use logback-class 1.2.10 to avoid knowingly using a library containing a critical vulnerability
+MVN is showing underlying dependancies of even the latest version have vulnerabilities, however using the latest stable release version of the named library suggest seems a reasonable compromise. 
+
+## File/Class Layout
+I probably need to pay more attention to this
