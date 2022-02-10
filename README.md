@@ -1,7 +1,7 @@
 # codingExerciseValuation
 A simple attempt at a java coding excercise which could be utilised to review a candidates approach to a task
 
-##The Task 
+## The Task 
 I've purposely not included the question itself within this repo, to avoid it appearing should anyone be searching for an answer to the same question.
 
 To summarise my understanding of the task:
