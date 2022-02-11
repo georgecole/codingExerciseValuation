@@ -78,3 +78,25 @@ MVN is showing underlying dependancies of even the latest version have vulnerabi
 
 ## File/Class Layout
 I probably need to pay more attention to this
+
+## Data Payload
+There's no getting around the fact that contextually this payload is odd.
+My initial analysis considered using streaming to parse the file, this could be done in both
+reading the file and then when commiting it to the database in batches.
+However the log file itself resembles JSON, but the entire file is invalid JSON or at least not a single parsable piece
+If the file was a JSON Array consisting of multiple lines, you would be forced to parse the whole file as splitting
+it in the wrong place would invalidate the block (unless you split and re-established the array syntax)
+Given these logs are just being output to a text file, you'd expect tab or comma seperated
+Instead we have a JSON object, for each log entry, splittable by line.
+This allows the data to be read one line at a time, seems to be stored in JSON format primarily to ensure a candidate has
+knowledge of a JSON parson library 
+
+Prior to submitting this exercise to candidates I would personally opt to include a sample data file.
+Only because the current approach to provide a screenshot (not copy/pastable) of the data could easily 
+see different candidates interpreting the data very differently, which could result in incomparable submissions
+
+As it stands from a single screenshot - I'll parse each ROW and convert it to an object
+Whilst parsing libraries have been tested and proven optimal, executing it x times per iteration 
+will lead to a solution which takes exponential times longer per each row.
+Given JSON libraries could recognise an array and parse straight to a Java List, this would probably have been more efficient 
+for the majority of payloads sizes.

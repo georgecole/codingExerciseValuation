@@ -1,15 +1,15 @@
 package com.company;
 
 import ch.qos.logback.core.util.StringCollectionUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationConfig;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 //import java.util.Scanner;
@@ -144,10 +144,73 @@ public class FileProcessor {
 
     private List<LogEntry> parseFile(File file) {
         ObjectMapper objectMapper = new ObjectMapper();
+        List<LogEntry> listLogs = new ArrayList<LogEntry>();
+
+        BufferedReader br = null;
+        try {
+            br = new BufferedReader(new FileReader(file));
+        } catch (FileNotFoundException e) {
+            logger.error("Failed to read file: ", e);
+        }
+        String line = null;
+        int lineCountForDebugging = 1;
+        // Don't fail is new or unknown properties are added
+        // Setting as default configuration, if this wasn't a tiny app should probably start add as annotation within the class
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        objectMapper.enable(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT);
+        while (true)
+        {
+            boolean rowProcessingSuccess = false;
+            try {
+                if (!((line = br.readLine()) != null)) break;
+            } catch (IOException e) {
+                logger.error("Failed to read line: ", e);
+            }
+            try {
+                if (line.isEmpty())
+                {
+                    logger.warn("Row {} was empty and will be ignored. Line Content {}", lineCountForDebugging, line);
+                }
+                else {
+                    LogEntry parsedEntry = objectMapper.readValue(line, new TypeReference<LogEntry>() {
+                    });
+                    // Debating using a dictionary / hashmap, and doing the grouping dynamically as part of a new class that
+                    // checks whether it's a start / stop event and populates the appropriate fields accordingly
+                    // Whilst this feels like the obvious solution, it places too much dependance on the java application
+                    // Whilst the java app could handle the load, it would be instance specific,
+                    // making it more difficult to alter scale the solution
+                    listLogs.add(parsedEntry);
+                }
+                rowProcessingSuccess = true;
+            } catch (JsonProcessingException e) {
+                logger.error("Failed to parse line " +  lineCountForDebugging + ": ", e);
+            }
+
+            if (rowProcessingSuccess)
+            {
+                /* TODO Success */
+                logger.debug("Row " + lineCountForDebugging + " was successfully processed");
+            }
+            else
+            {
+                logger.error("Row {} failed to be parsed/added. Line Content {}", lineCountForDebugging, line);
+            }
+
+            lineCountForDebugging++;
+
+        }
+        return listLogs;
+    }
+
+
+
+/*
+// Parsing the whole file in one go is a no go as it's not an array - half of me wants to just wrap it is square brackets because this worked really well
+    private List<LogEntry> parseFile(File file) {
+        ObjectMapper objectMapper = new ObjectMapper();
         List<LogEntry> listCar = new ArrayList<LogEntry>();
         try {
-            //LogEntry example = objectMapper.readValue(file, LogEntry.class);
-           listCar = objectMapper.readValue(file, new TypeReference<List<LogEntry>>(){});
+           listCar = objectMapper.readValue(file, new TypeReference<List<LogEntry>>(){}); // File isn't an array it's individual lines of JSON
         }
         catch (IOException ex)
         {
@@ -155,6 +218,8 @@ public class FileProcessor {
         }
         return listCar;
     }
+
+ */
 
     private void flagEvents() {
   
